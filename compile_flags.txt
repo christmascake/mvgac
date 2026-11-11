@@ -1,0 +1,42 @@
+-std=c99
+-ffreestanding
+
+#includes
+-Iinclude
+
+# Device / compiler identity
+-D__XC8
+-D__XC8_VERSION=3100
+-D__PICC__
+-D_16F877
+-D_PIC14
+
+# XC8 types
+-D__int24=__INT32_TYPE__
+-D__uint24=__UINT32_TYPE__
+-D__bit=_Bool
+
+# Register placement and bank qualifiers
+-D__at(x)=
+-D__bank0=
+-D__bank1=
+-D__bank2=
+-D__bank3=
+-D__near=
+-D__far=
+
+# Other storage and function qualifiers
+-D__persistent=
+-D__eeprom=
+-D__interrupt(x)=
+-D__pack=
+-D__section(x)=
+
+# Quiet XC8-specific pragmas (#pragma config etc.)
+-Wno-unknown-pragmas
+
+# Include paths
+-I/home/oru/opt/microchip/v6.35/packs/Microchip/PIC16Fxxx_DFP/1.8.167/xc8/pic/include
+-I/home/oru/opt/microchip/v6.35/packs/Microchip/PIC16Fxxx_DFP/1.8.167/xc8/pic/include/proc
+-I/home/oru/opt/microchip/v3.10/pic/include
+-I/home/oru/opt/microchip/v3.10/pic/include/c99
