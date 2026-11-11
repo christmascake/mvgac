@@ -1,3 +1,4 @@
 build
 main.hex
 run.sh
+.clang-format
