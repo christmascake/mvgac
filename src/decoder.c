@@ -7,4 +7,5 @@ void decoder_write(enum DECODER_FLAGS flag)
 	DECODER_OUTPUT_DRIVE();
 	NOP();
 	DECODER_OUTPUT_RELEASE();
+	NOP();
 }

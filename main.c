@@ -1,5 +1,6 @@
 #include <xc.h>
 
+#include "mvgac.h"
 #include "pins.h"
 #include "fbuf.h"
 #include "decoder.h"
@@ -22,11 +23,12 @@ void init(void);
 void main(void)
 {
 	init();
-	write(0b1100110010101010, 0xBC);
+	write(0b1100110010101010, '$');
 	read(0b1100110010101010);
 	SHARED_BUS_RELEASE();
-	while (!TRMT);
-	TXREG = SHARED_BUS_READ_VALUE();
+
+	serial_putchar(SHARED_BUS_READ_VALUE());
+
 	while (1);
 }
 

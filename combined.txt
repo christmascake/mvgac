@@ -1,0 +1,297 @@
+==> main.c <==
+#include <xc.h>
+
+#include "mvgac.h"
+#include "pins.h"
+#include "fbuf.h"
+#include "decoder.h"
+#include "control.h"
+
+#pragma config FOSC  = HS // Oscillator Selection bits (HS oscillator)
+#pragma config WDTE  = OFF // Watchdog Timer Enable bit (WDT disabled)
+#pragma config PWRTE = OFF // Power-up Timer Enable bit (PWRT disabled)
+#pragma config BOREN = OFF // Brown-out Reset Enable bit (BOR disabled)
+#pragma config LVP = OFF // Low-Voltage In-Circuit Serial Programming Enable bit
+#pragma config CPD = OFF // Data EEPROM Memory Code Protection bit (Data EEPROM
+// code protection off)
+#pragma config WRT = \
+	OFF // Flash Program Memory Write Enable bits (Write protection off)
+#pragma config CP = \
+	OFF // Flash Program Memory Code Protection bit (Code protection off)
+
+void init(void);
+
+void main(void)
+{
+	init();
+	write(0b1100110010101010, '$');
+	read(0b1100110010101010);
+	SHARED_BUS_RELEASE();
+
+	serial_prints("123456789");
+	while (1);
+}
+
+void init(void)
+{
+	ADCON1 = ADCON1_ALL_DIGITAL;
+	FBUF0_OUTPUT_RELEASE();
+	CONTROL_OUTPUT_RELEASE();
+	SHARED_BUS_RELEASE();
+	DECODER_INPUT_RELEASE();
+	DECODER_OUTPUT_RELEASE();
+
+	//serial
+	TRISC6 = 0;
+	TRISC7 = 1;
+
+	BRGH  = 1;
+	SPBRG = 129;
+
+	SYNC = 0;
+	SPEN = 1;
+	TXEN = 1;
+}
+
+==> include/control.h <==
+#ifndef MVGAC_INCLUDE_CONTROL_H_
+#define MVGAC_INCLUDE_CONTROL_H_
+
+#include <xc.h>
+
+/* ext pullup */
+#define CONTROL_PIN_OE		 A1
+#define CONTROL_OUTPUT_DRIVE()	 PIN_DRIVE_LOW(CONTROL_PIN_OE)
+#define CONTROL_OUTPUT_RELEASE() PIN_SET_INPUT(CONTROL_PIN_OE)
+
+#endif
+
+==> include/decoder.h <==
+#ifndef MVGAC_INCLUDE_DECODER_H_
+#define MVGAC_INCLUDE_DECODER_H_
+
+#include "defines.h"
+
+/* ext pulldown */
+// WARNING: making these all the same port may be necessary for speed (?)
+#define DECODER_PIN_OE A5
+#define DECODER_PIN_S0 A0
+#define DECODER_PIN_S1 B1
+#define DECODER_PIN_S2 B2
+#define DECODER_PIN_S3 B3
+
+enum DECODER_FLAGS {
+	DECODER_CONTROL_WRITE,
+	DECODER_FBUF0_WRITE,
+	DECODER_FBUF0_ADR_LOW_WRITE,
+	DECODER_FBUF0_ADR_HIGH_WRITE
+};
+
+// WARNING: port reading glitch thing that i don't understand means we have to
+// set tris to output first before writing to port (?)
+#define DECODER_DRIVE_VALUE(val)                                \
+	do {                                                    \
+		PIN_SET_OUTPUT(DECODER_PIN_S0);                 \
+		PIN_SET_OUTPUT(DECODER_PIN_S1);                 \
+		PIN_SET_OUTPUT(DECODER_PIN_S2);                 \
+		PIN_SET_OUTPUT(DECODER_PIN_S3);                 \
+		PIN_PORT(DECODER_PIN_S0) = (((val) >> 0) & 1U); \
+		PIN_PORT(DECODER_PIN_S1) = (((val) >> 1) & 1U); \
+		PIN_PORT(DECODER_PIN_S2) = (((val) >> 2) & 1U); \
+		PIN_PORT(DECODER_PIN_S3) = (((val) >> 3) & 1U); \
+	} while (0)
+
+#define DECODER_INPUT_RELEASE()                \
+	do {                                   \
+		PIN_SET_INPUT(DECODER_PIN_S0); \
+		PIN_SET_INPUT(DECODER_PIN_S1); \
+		PIN_SET_INPUT(DECODER_PIN_S2); \
+		PIN_SET_INPUT(DECODER_PIN_S3); \
+	} while (0)
+
+#define DECODER_OUTPUT_DRIVE()	 PIN_DRIVE_LOW(DECODER_PIN_OE)
+#define DECODER_OUTPUT_RELEASE() PIN_SET_INPUT(DECODER_PIN_OE)
+
+void decoder_write(enum DECODER_FLAGS flag);
+
+#endif
+
+==> include/defines.h <==
+#ifndef MVGAC_INCLUDE_DEFINES_H_
+#define MVGAC_INCLUDE_DEFINES_H_
+
+#include <xc.h>
+
+#define _XTAL_FREQ 20000000 // 20 MHz
+
+#define HIGH_BYTE(n) ((uint8_t)(((uint16_t)(n) >> 8) & 0xFFU))
+#define LOW_BYTE(n)  ((uint8_t)((uint16_t)(n) & 0xFFU))
+
+#define TRIS_ALL_READ	0xFF
+#define TRIS_ALL_OUTPUT 0x00
+
+#define PIN_CAT_IMPL(p, n) p##n
+#define PIN_CAT(p, n)	   PIN_CAT_IMPL(p, n)
+
+#define PIN_PORT(pin)	 PIN_CAT(R, pin)
+#define PIN_TRIS(pin)	 PIN_CAT(TRIS, pin)
+#define PORT_LATCH(port) PIN_CAT(PORT, port)
+#define PORT_TRIS(port)	 PIN_CAT(TRIS, port)
+
+#define PIN_SET_INPUT(pin)         \
+	do {                       \
+		PIN_TRIS(pin) = 1; \
+	} while (0)
+
+#define PIN_SET_OUTPUT(pin)        \
+	do {                       \
+		PIN_TRIS(pin) = 0; \
+	} while (0)
+
+#define PIN_DRIVE_LOW(pin)         \
+	do {                       \
+		PIN_PORT(pin) = 0; \
+		PIN_TRIS(pin) = 0; \
+	} while (0)
+
+#define PIN_DRIVE_HIGH(pin)        \
+	do {                       \
+		PIN_PORT(pin) = 1; \
+		PIN_TRIS(pin) = 0; \
+	} while (0)
+
+#define PORT_SET_INPUT(port)                     \
+	do {                                     \
+		PORT_TRIS(port) = TRIS_ALL_READ; \
+	} while (0)
+
+#define PORT_SET_OUTPUT(port)                      \
+	do {                                       \
+		PORT_TRIS(port) = TRIS_ALL_OUTPUT; \
+	} while (0)
+
+#define PORT_DRIVE_VALUE(port, val)       \
+	do {                              \
+		PORT_LATCH(port) = (val); \
+		PORT_SET_OUTPUT(port);    \
+	} while (0)
+
+#define PORT_READ(port) (PORT_LATCH(port))
+
+#endif
+
+==> include/fbuf.h <==
+#ifndef MVGAC_INCLUDE_FBUF_H_
+#define MVGAC_INCLUDE_FBUF_H_
+
+#include <xc.h>
+
+/* ext pullup */
+#define FBUF0_PIN_OE	       E0
+#define FBUF0_OUTPUT_DRIVE()   PIN_DRIVE_LOW(FBUF0_PIN_OE)
+#define FBUF0_OUTPUT_RELEASE() PIN_SET_INPUT(FBUF0_PIN_OE)
+
+void write(uint16_t adr, uint8_t data);
+void read(uint16_t adr);
+
+#endif
+
+==> include/mvgac.h <==
+#ifndef MVGAC_INCLUDE_MVGAC_H_
+#define MVGAC_INCLUDE_MVGAC_H_
+
+#define DEBUG_SERIAL
+
+void serial_putchar(const char c);
+void serial_prints(const char *str);
+
+#endif
+
+==> include/pins.h <==
+#ifndef MVGAC_INCLUDE_PINS_H_
+#define MVGAC_INCLUDE_PINS_H_
+
+#include "defines.h"
+
+#define ADCON1_ALL_DIGITAL 0x06
+
+/* ext pulldown */
+#define SHARED_BUS_PORT		    D
+#define SHARED_BUS_DRIVE_VALUE(val) PORT_DRIVE_VALUE(SHARED_BUS_PORT, val)
+#define SHARED_BUS_RELEASE()	    PORT_SET_INPUT(SHARED_BUS_PORT)
+#define SHARED_BUS_READ_VALUE()	    PORT_READ(SHARED_BUS_PORT)
+
+#endif
+
+==> src/control.c <==
+#include "control.h"
+
+==> src/decoder.c <==
+#include "decoder.h"
+
+void decoder_write(enum DECODER_FLAGS flag)
+{
+	DECODER_DRIVE_VALUE(flag);
+	NOP();
+	DECODER_OUTPUT_DRIVE();
+	NOP();
+	DECODER_OUTPUT_RELEASE();
+}
+
+==> src/fbuf.c <==
+#include "fbuf.h"
+
+#include "control.h"
+#include "defines.h"
+#include "pins.h"
+#include "decoder.h"
+
+void write(uint16_t adr, uint8_t data)
+{
+	SHARED_BUS_DRIVE_VALUE(LOW_BYTE(adr));
+	decoder_write(DECODER_FBUF0_ADR_LOW_WRITE);
+
+	SHARED_BUS_DRIVE_VALUE(HIGH_BYTE(adr));
+	decoder_write(DECODER_FBUF0_ADR_HIGH_WRITE);
+
+	// TODO: encapsulate this
+	SHARED_BUS_DRIVE_VALUE(0b0);
+	decoder_write(DECODER_CONTROL_WRITE);
+	CONTROL_OUTPUT_DRIVE();
+
+	SHARED_BUS_DRIVE_VALUE(data);
+	decoder_write(DECODER_FBUF0_WRITE);
+	SHARED_BUS_RELEASE();
+}
+
+void read(uint16_t adr)
+{
+	SHARED_BUS_DRIVE_VALUE(LOW_BYTE(adr));
+	decoder_write(DECODER_FBUF0_ADR_LOW_WRITE);
+
+	SHARED_BUS_DRIVE_VALUE(HIGH_BYTE(adr));
+	decoder_write(DECODER_FBUF0_ADR_HIGH_WRITE);
+
+	// TODO: encapsulate this
+	SHARED_BUS_DRIVE_VALUE(0b0);
+	decoder_write(DECODER_CONTROL_WRITE);
+	CONTROL_OUTPUT_DRIVE();
+
+	SHARED_BUS_RELEASE();
+	FBUF0_OUTPUT_DRIVE();
+}
+
+==> src/mvgac.c <==
+#include "mvgac.h"
+#include <xc.h>
+
+void serial_putchar(const char c)
+{
+	while (!TRMT);
+	TXREG = c;
+}
+
+void serial_prints(const char *str)
+{
+	while (*str != '\0') serial_putchar(*str++);
+}
