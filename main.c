@@ -24,6 +24,9 @@ void main(void)
 	init();
 	write(0b1100110010101010, 0xBC);
 	read(0b1100110010101010);
+	SHARED_BUS_RELEASE();
+	while (!TRMT);
+	TXREG = SHARED_BUS_READ_VALUE();
 	while (1);
 }
 
@@ -35,4 +38,15 @@ void init(void)
 	SHARED_BUS_RELEASE();
 	DECODER_INPUT_RELEASE();
 	DECODER_OUTPUT_RELEASE();
+
+	//serial
+	TRISC6 = 0;
+	TRISC7 = 1;
+
+	BRGH  = 1;
+	SPBRG = 129;
+
+	SYNC = 0;
+	SPEN = 1;
+	TXEN = 1;
 }
