@@ -1,0 +1,11 @@
+#ifndef MVGAC_INCLUDE_CONTROL_H_
+#define MVGAC_INCLUDE_CONTROL_H_
+
+#include <xc.h>
+
+/* ext pullup */
+#define CONTROL_PIN_OE		 A1
+#define CONTROL_OUTPUT_DRIVE()	 PIN_DRIVE_LOW(CONTROL_PIN_OE)
+#define CONTROL_OUTPUT_RELEASE() PIN_SET_INPUT(CONTROL_PIN_OE)
+
+#endif

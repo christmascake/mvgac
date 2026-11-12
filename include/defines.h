@@ -3,6 +3,11 @@
 
 #include <xc.h>
 
+#define _XTAL_FREQ 20000000 // 20 MHz
+
+#define HIGH_BYTE(n) ((uint8_t)(((uint16_t)(n) >> 8) & 0xFFU))
+#define LOW_BYTE(n)  ((uint8_t)((uint16_t)(n) & 0xFFU))
+
 #define TRIS_ALL_READ	0xFF
 #define TRIS_ALL_OUTPUT 0x00
 

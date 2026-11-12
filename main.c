@@ -1,7 +1,9 @@
 #include <xc.h>
 
-#include "defines.h"
 #include "pins.h"
+#include "fbuf.h"
+#include "decoder.h"
+#include "control.h"
 
 #pragma config FOSC  = HS // Oscillator Selection bits (HS oscillator)
 #pragma config WDTE  = OFF // Watchdog Timer Enable bit (WDT disabled)
@@ -15,23 +17,19 @@
 #pragma config CP = \
 	OFF // Flash Program Memory Code Protection bit (Code protection off)
 
-// Define your clock frequency for the built-in delay functions
-#define _XTAL_FREQ 20000000 // 20 MHz
-
 void init(void);
 
 void main(void)
 {
 	init();
-	SHARED_BUS_READ_VALUE();
-	DECODER_DRIVE_VALUE(0b1010);
+	write(0b1100110010101010, 0xBC);
+	read(0b1100110010101010);
 	while (1);
 }
 
 void init(void)
 {
 	ADCON1 = ADCON1_ALL_DIGITAL;
-
 	FBUF0_OUTPUT_RELEASE();
 	CONTROL_OUTPUT_RELEASE();
 	SHARED_BUS_RELEASE();
